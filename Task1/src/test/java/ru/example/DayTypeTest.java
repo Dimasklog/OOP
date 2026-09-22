@@ -7,7 +7,7 @@ import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
- * Тесты перечисления {@link DayType}.
+ * Тесты перечисления.
  */
 class DayTypeTest {
 
