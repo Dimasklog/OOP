@@ -15,7 +15,7 @@ class DayTypeTest {
      * Ровно две константы, и они различны между собой.
      */
     @Test
-    void hasExactlyTwoDistinctConstants() {
+    void fieldTest() {
         DayType[] values = DayType.values();
         assertEquals(2, values.length);
         assertNotEquals(values[0], values[1]);
