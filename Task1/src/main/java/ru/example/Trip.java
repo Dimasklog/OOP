@@ -7,6 +7,7 @@
      * @param codeOfRoute идентификатор, уникальный код маршрута
      * @param departureTime время отправления рейса
      * @param dayType тип дня (будний или выходной)
+     * @throws IllegalArgumentException если codeOfRoute не положительный или departureTime null или dayType null
      */
     public record Trip(long codeOfRoute, LocalTime departureTime, DayType dayType) {
         public Trip{

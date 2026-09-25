@@ -7,6 +7,7 @@ import java.time.Duration;
  * @param stopFrom начальная остановка
  * @param stopTo конечная остановка
  * @param duration время хода между остановками
+ * @throws IllegalArgumentException если stopFrom, stopTo или duration null, если stopFrom совпадает с stopTo, если duration не положительное
  */
 public record Segment(TransportStop stopFrom, TransportStop stopTo, Duration duration) {
     public Segment{
