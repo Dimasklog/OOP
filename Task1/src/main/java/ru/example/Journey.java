@@ -5,7 +5,7 @@ import java.time.Duration;
 /**
  * Интерфейс поездки.
  */
-public interface Journey {
+public sealed interface Journey permits DirectRoute, TransferRoute {
     /**
      * Минимальное время на пересадку.
      */
