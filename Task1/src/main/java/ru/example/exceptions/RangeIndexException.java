@@ -1,4 +1,4 @@
-package ru.example;
+package ru.example.exceptions;
 
 /**
  * Исключение индекса остановки: индекс вне диапазона остановок маршрута.

@@ -1,5 +1,9 @@
 package ru.example;
 
+import ru.example.exceptions.ForeignTripException;
+import ru.example.exceptions.RangeIndexException;
+import ru.example.exceptions.TransportStopNotInRouteException;
+
 import java.time.Duration;
 import java.util.List;
 

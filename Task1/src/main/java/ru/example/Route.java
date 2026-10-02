@@ -1,5 +1,9 @@
 package ru.example;
 
+import ru.example.enums.DayType;
+import ru.example.enums.TransportType;
+import ru.example.exceptions.*;
+
 import java.time.Duration;
 import java.time.LocalTime;
 import java.util.ArrayList;

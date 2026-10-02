@@ -1,5 +1,10 @@
 package ru.example;
 
+import ru.example.enums.DayType;
+import ru.example.enums.TransportType;
+import ru.example.exceptions.FeasibilityJourneyException;
+import ru.example.exceptions.LessTripException;
+
 import java.time.Duration;
 import java.time.LocalTime;
 
@@ -29,6 +34,8 @@ public class Main {
         var busRoute = new Route(1, "7", TransportType.BUS, park);
         busRoute.extensionTransportStop(library, Duration.ofMinutes(10));
         busRoute.extensionTransportStop(station, Duration.ofMinutes(5));
+        busRoute.extensionTransportStop(stadium, Duration.ofMinutes(7));
+        busRoute.extensionTransportStop(culturePark, Duration.ofMinutes(5));
 
         var tramRoute = new Route(2, "37", TransportType.TRAM, park);
         tramRoute.extensionTransportStop(market, Duration.ofMinutes(8));
@@ -78,6 +85,10 @@ public class Main {
         System.out.println("\n=== 2. Расписание по остановке и дню ===");
         System.out.println("-- Будний день на остановке Вокзал --");
         for (var entry : network.timetable(station, DayType.WEEKDAY)) {
+            System.out.println("- Маршрут " + entry.route().getRouteName() + ", прибытие: " + entry.arrivalTime());
+        }
+        System.out.println("-- Будний день на остановке Стадион --");
+        for (var entry : network.timetable(stadium, DayType.WEEKDAY)) {
             System.out.println("- Маршрут " + entry.route().getRouteName() + ", прибытие: " + entry.arrivalTime());
         }
         System.out.println("-- Выходной день на остановке Вокзал --");
@@ -140,7 +151,7 @@ public class Main {
             var leg1 = new DirectRoute(busRoute, tripA, park, library);
             var leg2 = new DirectRoute(tramRoute2, tripB, library, station);
             var infeasibleJourney = new TransferRoute(leg1, leg2);
-            
+
             System.out.println(infeasibleJourney.allTimeInJourney());
         } catch (FeasibilityJourneyException e) {
             System.out.println("Поездка не может быть осуществлена: " + e.getMessage());

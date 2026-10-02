@@ -1,6 +1,7 @@
 package ru.example;
 
 import org.junit.jupiter.api.Test;
+import ru.example.enums.DayType;
 
 import java.time.LocalTime;
 

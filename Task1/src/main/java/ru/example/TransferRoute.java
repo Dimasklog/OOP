@@ -1,5 +1,7 @@
 package ru.example;
 
+import ru.example.exceptions.FeasibilityJourneyException;
+
 import java.time.Duration;
 import java.time.LocalTime;
 

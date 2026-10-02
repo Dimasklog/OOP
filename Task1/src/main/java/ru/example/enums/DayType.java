@@ -1,4 +1,4 @@
-package ru.example;
+package ru.example.enums;
 
 /**
  * Типы дня, по которым может ходить транспорт.

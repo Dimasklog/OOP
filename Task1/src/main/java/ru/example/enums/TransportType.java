@@ -1,4 +1,4 @@
-package ru.example;
+package ru.example.enums;
 
 /**
  * Типы транспорта, которые ходят по маршрутам.

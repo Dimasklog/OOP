@@ -1,5 +1,7 @@
     package ru.example;
 
+    import ru.example.enums.DayType;
+
     import java.time.LocalTime;
 
     /**

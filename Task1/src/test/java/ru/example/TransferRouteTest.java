@@ -1,6 +1,10 @@
 package ru.example;
 
 import org.junit.jupiter.api.Test;
+import ru.example.enums.DayType;
+import ru.example.enums.TransportType;
+import ru.example.exceptions.FeasibilityJourneyException;
+import ru.example.exceptions.RangeIndexException;
 
 import java.time.Duration;
 import java.time.LocalTime;
@@ -160,5 +164,31 @@ class TransferRouteTest {
         DirectRoute leg = new DirectRoute(route, trip, park, library);
         assertThrows(IllegalArgumentException.class, () -> new TransferRoute(null, leg));
         assertThrows(IllegalArgumentException.class, () -> new TransferRoute(leg, null));
+    }
+    /**
+     * Тест с полночи.
+     */
+    @Test
+    void transferOnMidnight(){
+        TransportStop park = new TransportStop(101, "Парк");
+        TransportStop library = new TransportStop(110, "Библиотека");
+        TransportStop station = new TransportStop(120, "Вокзал");
+
+        Route firstRoute = new Route(1, "7", TransportType.BUS, park);
+        firstRoute.extensionTransportStop(library, Duration.ofMinutes(10));
+        Route secondRoute = new Route(2, "37", TransportType.BUS, library);
+        secondRoute.extensionTransportStop(station, Duration.ofMinutes(5));
+
+        Trip firstTrip = new Trip(1, LocalTime.of(0, 0), DayType.WEEKDAY);
+        firstRoute.addTrip(firstTrip);
+        Trip secondTrip = new Trip(2, LocalTime.of(0, 15), DayType.WEEKDAY);
+        secondRoute.addTrip(secondTrip);
+
+        DirectRoute firstLeg = new DirectRoute(firstRoute, firstTrip, park, library);
+        DirectRoute secondLeg = new DirectRoute(secondRoute, secondTrip, library, station);
+        TransferRoute journey = new TransferRoute(firstLeg, secondLeg);
+
+        assertTrue(journey.feasibility());
+        assertEquals(Duration.ofMinutes(15), journey.allTimeInJourney());
     }
 }
