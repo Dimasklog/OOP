@@ -13,12 +13,19 @@ import java.util.List;
  * @param trip рейс на котором осуществляется поездка
  * @param landingTransportStop остановка посадки
  * @param leavingTransportStop остановка выхода
- * @throws IllegalArgumentException если route, landingTransportStop, leavingTransportStop или trip - null
- * @throws ForeignTripException если код trip не совпадает с кодом route
- * @throws TransportStopNotInRouteException если landingTransportStop или leavingTransportStop не содержатся в списке остановок у route
- * @throws RangeIndexException если landingTransportStop после leavingTransportStop
  */
 public record DirectRoute(Route route, Trip trip, TransportStop landingTransportStop, TransportStop leavingTransportStop) implements Journey {
+    /**
+     * Создаёт прямую поездку.
+     * @param route маршрут по которому осуществляется поездка
+     * @param trip рейс на котором осуществляется поездка
+     * @param landingTransportStop остановка посадки
+     * @param leavingTransportStop остановка выхода
+     * @throws IllegalArgumentException если route, landingTransportStop, leavingTransportStop или trip - null
+     * @throws ForeignTripException если код trip не совпадает с кодом route
+     * @throws TransportStopNotInRouteException если landingTransportStop или leavingTransportStop не содержатся в списке остановок у route
+     * @throws RangeIndexException если landingTransportStop после leavingTransportStop
+     */
     public DirectRoute{
         if (route == null){
             throw new IllegalArgumentException("route must not be null");

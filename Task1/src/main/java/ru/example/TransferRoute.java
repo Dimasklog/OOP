@@ -9,9 +9,14 @@ import java.time.LocalTime;
  * Поездка с пересадкой.
  * @param firstRoute первое плечо поездки, поездка до пересадки
  * @param secondRoute второе плечо поездки, поездка после пересадки
- * @throws IllegalArgumentException если firstRoute или secondRoute null, если остановка высадки для пересадки не совпадает с остановкой посадки после пересадки
  */
 public record TransferRoute(DirectRoute firstRoute, DirectRoute secondRoute) implements Journey {
+    /**
+     * Создаёт поездку с пересадкой.
+     * @param firstRoute первое плечо поездки, поездка до пересадки
+     * @param secondRoute второе плечо поездки, поездка после пересадки
+     * @throws IllegalArgumentException если firstRoute или secondRoute null, если остановка высадки для пересадки не совпадает с остановкой посадки после пересадки
+     */
     public TransferRoute{
         if (firstRoute == null){
             throw new IllegalArgumentException("first route must not be null");

@@ -7,9 +7,15 @@ import java.time.Duration;
  * @param stopFrom начальная остановка
  * @param stopTo конечная остановка
  * @param duration время хода между остановками
- * @throws IllegalArgumentException если stopFrom, stopTo или duration null, если stopFrom совпадает с stopTo, если duration не положительное
  */
 public record Segment(TransportStop stopFrom, TransportStop stopTo, Duration duration) {
+    /**
+     * Создаёт участок маршрута.
+     * @param stopFrom начальная остановка
+     * @param stopTo конечная остановка
+     * @param duration время хода между остановками
+     * @throws IllegalArgumentException если stopFrom, stopTo или duration null, если stopFrom совпадает с stopTo, если duration не положительное
+     */
     public Segment{
         if (stopFrom == null || stopTo == null){
             throw new IllegalArgumentException("Transport stops must be not null");

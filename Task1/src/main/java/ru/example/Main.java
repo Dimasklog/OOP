@@ -8,6 +8,9 @@ import ru.example.exceptions.LessTripException;
 import java.time.Duration;
 import java.time.LocalTime;
 
+/**
+ * Точка входа в приложение. Демонстрирует работу транспортной сети.
+ */
 public class Main {
 
     /**
@@ -19,6 +22,10 @@ public class Main {
         return hours > 0 ? hours + " ч " + minutes + " мин" : minutes + " мин";
     }
 
+    /**
+     * Главный метод приложения.
+     * @param args аргументы командной строки (не используются)
+     */
     public static void main(String[] args) {
         var park = new TransportStop(101, "Парк");
         var library = new TransportStop(110, "Библиотека");

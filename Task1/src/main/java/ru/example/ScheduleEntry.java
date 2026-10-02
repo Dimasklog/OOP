@@ -7,9 +7,15 @@ import java.time.LocalTime;
  * @param route маршрут, для которого работает расписание
  * @param trip рейс, для которого работает расписание
  * @param arrivalTime время прибытия на остановку
- * @throws IllegalArgumentException если route, trip или arrivalTime null
  */
 public record ScheduleEntry(Route route, Trip trip, LocalTime arrivalTime) {
+    /**
+     * Создаёт запись расписания.
+     * @param route маршрут, для которого работает расписание
+     * @param trip рейс, для которого работает расписание
+     * @param arrivalTime время прибытия на остановку
+     * @throws IllegalArgumentException если route, trip или arrivalTime null
+     */
     public ScheduleEntry{
         if (route == null){
             throw new IllegalArgumentException("route must not be null");
