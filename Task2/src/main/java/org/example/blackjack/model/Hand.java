@@ -4,13 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Рука из кард.
+ * Рука из карт.
  */
 public class Hand {
     private final List<Card> cards = new ArrayList<>();
 
     /**
-     * Изначально оздается пустая рука.
+     * Изначально раздается пустая рука.
      */
     public Hand(){
     }
