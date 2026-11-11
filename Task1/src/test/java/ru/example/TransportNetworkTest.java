@@ -117,7 +117,7 @@ class TransportNetworkTest {
         assertEquals(1, dayoffTimetable.size());
         assertEquals(dayoffTrip, dayoffTimetable.getFirst().trip());
     }
-
+3
     /**
      * Остановка вне сети даёт пустое расписание, а не исключение.
      */
