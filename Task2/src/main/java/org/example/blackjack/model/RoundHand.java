@@ -80,6 +80,18 @@ public class RoundHand {
     }
 
     /**
+     * Проверяет наличие начального блэкджека.
+     *
+     * @return true, если две начальные карты дают 21 очко
+     */
+    public boolean isBlackjack(){
+        if (getCards().size() == 2 && getTotal() == 21){
+            return true;
+        }
+        return false;
+    }
+
+    /**
      * Возвращает неизменяемую копию списка карт.
      * Последующие изменения руки не меняют полученную копию.
      *

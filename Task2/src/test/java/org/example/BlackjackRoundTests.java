@@ -1,6 +1,7 @@
 package org.example;
 
 import org.example.blackjack.model.*;
+import org.example.blackjack.model.actions.*;
 import org.example.blackjack.model.enums.RoundPhase;
 import org.example.blackjack.model.exceptions.*;
 import org.junit.jupiter.api.Test;
@@ -31,6 +32,7 @@ class BlackjackRoundTests {
                 () -> round.getCurrentPlayerId());
         assertThrows(IllegalMoveException.class,
                 () -> round.getCurrentHandIndex());
+        assertThrows(IllegalMoveException.class, () -> round.playDealer());
     }
 
     @Test
@@ -166,5 +168,77 @@ class BlackjackRoundTests {
         game.placeBet(id, bet);
         game.start();
         return game;
+    }
+    @Test
+    void standActionTest() {
+        round.placeBet(id, bet);
+        round.start();
+
+        GameAction action = new StandAction(new PlayerId(1), 0);
+        action.execute(round);
+
+        assertEquals(RoundPhase.DEALER_TURN, round.getPhase());
+    }
+
+    @Test
+    void hitActionTest() {
+        round.placeBet(id, bet);
+        round.start();
+
+        GameAction action = new HitAction(new PlayerId(1), 0);
+        action.execute(round);
+
+        // При нашем seed 0 игрок получает перебор после добора.
+        assertEquals(47, shoe.remainingCards());
+        assertEquals(RoundPhase.DEALER_TURN, round.getPhase());
+    }
+
+    @Test
+    void actionsRejectNullRoundTest() {
+        GameAction hit = new HitAction(id, 0);
+        GameAction stand = new StandAction(id, 0);
+
+        assertThrows(IllegalArgumentException.class,
+                () -> hit.execute(null));
+        assertThrows(IllegalArgumentException.class,
+                () -> stand.execute(null));
+    }
+    @Test
+    void dealerDrawsTest() {
+        round.placeBet(id, bet);
+        round.start();
+        round.stand(id, 0);
+
+        round.playDealer();
+
+        assertEquals(RoundPhase.SETTLEMENT, round.getPhase());
+        assertEquals(46, shoe.remainingCards());
+    }
+
+    @Test
+    void dealerSkipsBustedHandsTest() {
+        round.placeBet(id, bet);
+        round.start();
+        round.hit(id, 0); // При seed 0 игрок перебирает.
+
+        round.playDealer();
+
+        assertEquals(RoundPhase.SETTLEMENT, round.getPhase());
+        assertEquals(47, shoe.remainingCards());
+    }
+
+    @Test
+    void dealerStopsOnSoft17Test() {
+        // При seed 242 дилер получает шестёрку и туза.
+        Shoe softShoe = new Shoe(1, new Random(242));
+        BlackjackRound game = new BlackjackRound(List.of(player), softShoe);
+        game.placeBet(id, bet);
+        game.start();
+        game.stand(id, 0);
+
+        game.playDealer();
+
+        assertEquals(RoundPhase.SETTLEMENT, game.getPhase());
+        assertEquals(48, softShoe.remainingCards());
     }
 }

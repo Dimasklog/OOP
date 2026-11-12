@@ -1,9 +1,11 @@
     package org.example.blackjack.model;
 
+    import org.example.blackjack.model.enums.HandStatus;
     import org.example.blackjack.model.enums.Rank;
     import org.example.blackjack.model.enums.RoundPhase;
     import org.example.blackjack.model.exceptions.IllegalMoveException;
     import org.example.blackjack.model.exceptions.InsufficientFundsException;
+    import org.example.blackjack.model.exceptions.ShoeEmptyException;
 
     import java.util.ArrayList;
     import java.util.LinkedHashMap;
@@ -102,6 +104,57 @@
             dealInitialCards();
             choosePhaseAfterInitialDeal();
         }
+
+        /**
+         * Выдает карту текущей руке и обновляет очередь.
+         *
+         * @param playerId идентификатор игрока
+         * @param handIndex индекс руки, начиная с нуля
+         * @throws IllegalArgumentException если идентификатор null
+         *                                  или индекс отрицательный
+         * @throws IllegalMoveException если добор этой рукой сейчас запрещен
+         * @throws ShoeEmptyException если в башмаке закончились карты
+         */
+        public void hit(PlayerId playerId, int handIndex){
+            RoundHand currentHand = validateCurrentHand(playerId, handIndex);
+            currentHand.addCard(shoe.draw());
+            advanceTurn();
+        }
+
+        /**
+         * Останавливает текущую руку и обновляет очередь.
+         *
+         * @param playerId идентификатор игрока
+         * @param handIndex индекс руки, начиная с нуля
+         * @throws IllegalArgumentException если идентификатор null или индекс отрицательный
+         * @throws IllegalMoveException если остановка этой рукой сейчас запрещена
+         */
+        public void stand(PlayerId playerId, int handIndex){
+            RoundHand currentHand = validateCurrentHand(playerId, handIndex);
+            currentHand.stand();
+            advanceTurn();
+        }
+
+        /**
+         * Выполняет ход дилера и переводит раздачу к расчетам.
+         * Дилер добирает до 17, включая остановку на мягких 17.
+         * Если сравнивать руки не требуется, карты не добираются.
+         *
+         * @throws IllegalMoveException если сейчас не ход дилера
+         * @throws ShoeEmptyException если при доборе закончились карты
+         */
+        public void playDealer(){
+            if (phase != RoundPhase.DEALER_TURN){
+                throw new IllegalMoveException("phase must be 'DEALER_TURN'");
+            }
+            if (hasHandsToCompare()){
+                while (evaluator.evaluate(dealerHand) < 17){
+                    dealerHand.addCard(shoe.draw());
+                }
+            }
+            phase = RoundPhase.SETTLEMENT;
+        }
+
 
         /**
          * Возвращает идентификатор игрока, который сейчас ходит.
@@ -215,5 +268,48 @@
                     phase = RoundPhase.SETTLEMENT;
                 }
             }
+        }
+
+        private RoundHand validateCurrentHand(PlayerId playerId, int handIndex){
+            if (playerId == null){
+                throw new IllegalArgumentException("player id must not be null");
+            }
+            if (handIndex < 0){
+                throw new IllegalArgumentException("hand index must be non-negative");
+            }
+            if (phase != RoundPhase.PLAYER_TURNS){
+                throw new IllegalMoveException("phase must be 'PLAYER_TURNS'");
+            }
+            if (!playerId.equals(getCurrentPlayerId())){
+                throw new IllegalMoveException("player id incorrect");
+            }
+            if (handIndex != getCurrentHandIndex()){
+                throw new IllegalMoveException("hand index incorrect");
+            }
+            RoundHand currentHand = hands.get(playerId).get(handIndex);
+
+            if (currentHand.getStatus().isFinished()) {
+                throw new IllegalMoveException("hand is already finished");
+            }
+
+            return currentHand;
+        }
+
+        private void advanceTurn(){
+            if (selectFirstActiveHand()){
+                phase = RoundPhase.PLAYER_TURNS;
+            } else {
+                phase = RoundPhase.DEALER_TURN;
+            }
+        }
+        private boolean hasHandsToCompare(){
+            for (List<RoundHand> roundHandLists: hands.values()){
+                for (RoundHand roundHand: roundHandLists){
+                    if (roundHand.getStatus() == HandStatus.STOOD && !roundHand.isBlackjack()){
+                        return true;
+                    }
+                }
+            }
+            return false;
         }
     }
