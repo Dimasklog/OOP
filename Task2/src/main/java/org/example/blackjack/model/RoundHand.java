@@ -14,14 +14,16 @@ public class RoundHand {
     private Money bet;
     private HandStatus status;
     private final HandEvaluator evaluator = new HandEvaluator();
+    private final boolean fromSplit;
 
     /**
-     * Создает пустую активную руку с указанной ставкой.
+     * Создает пустую активную руку с указанной ставкой и происхождением.
      *
      * @param bet ставка руки
+     * @param fromSplit true, если рука создана разделением пары
      * @throws IllegalArgumentException если ставка null или не больше нуля
      */
-    public RoundHand(Money bet) {
+    public RoundHand(Money bet, boolean fromSplit){
         if (bet == null) {
             throw new IllegalArgumentException("bet must not be null");
         }
@@ -31,6 +33,17 @@ public class RoundHand {
 
         this.bet = bet;
         this.status = HandStatus.ACTIVE;
+        this.fromSplit = fromSplit;
+    }
+
+    /**
+     * Создает пустую активную руку с указанной ставкой.
+     *
+     * @param bet ставка руки
+     * @throws IllegalArgumentException если ставка null или не больше нуля
+     */
+    public RoundHand(Money bet) {
+        this(bet, false);
     }
 
     /**
@@ -83,7 +96,7 @@ public class RoundHand {
      * Сдает активную руку из двух карт.
      * Возврат половины ставки выполняется при расчете раздачи.
      *
-     * @throws IllegalMoveException если рука завершена или содержит не две карты
+     * @throws IllegalMoveException если рука завершена, содержит не две карты или создана разделением
      */
     public void surrender() {
         if (status.isFinished()) {
@@ -92,16 +105,45 @@ public class RoundHand {
         if (hand.getCards().size() != 2) {
             throw new IllegalMoveException("hand must have exactly two cards");
         }
+        if (fromSplit){
+            throw new IllegalMoveException("can not be from split");
+        }
 
         status = HandStatus.SURRENDERED;
     }
+
+    /**
+     * Удваивает ставку, добавляет одну карту и завершает действия рукой.
+     * При переборе рука сохраняет состояние BUST.
+     *
+     * @param card дополнительная карта
+     * @throws IllegalArgumentException если карта null
+     * @throws IllegalMoveException если рука завершена или содержит не две карты
+     */
+    public void doubleDown(Card card){
+        if (card == null){
+            throw new IllegalArgumentException("card must not be null");
+        }
+        if (status.isFinished()) {
+            throw new IllegalMoveException("hand is already finished");
+        }
+        if (hand.getCards().size() != 2) {
+            throw new IllegalMoveException("hand must have exactly two cards");
+        }
+        bet = bet.multiply(new BigDecimal("2"));
+        addCard(card);
+        if (getStatus() == HandStatus.ACTIVE){
+            status = HandStatus.STOOD;
+        }
+    }
+
     /**
      * Проверяет наличие начального блэкджека.
      *
-     * @return true, если две начальные карты дают 21 очко
+     * @return true, если исходная рука из двух карт дает 21 очко
      */
     public boolean isBlackjack(){
-        if (getCards().size() == 2 && getTotal() == 21){
+        if (!fromSplit && getCards().size() == 2 && getTotal() == 21){
             return true;
         }
         return false;
@@ -133,6 +175,15 @@ public class RoundHand {
      */
     public HandStatus getStatus() {
         return status;
+    }
+
+    /**
+     * Проверяет происхождение руки.
+     *
+     * @return true, если рука создана разделением пары
+     */
+    public boolean isFromSplit(){
+        return fromSplit;
     }
 
 }

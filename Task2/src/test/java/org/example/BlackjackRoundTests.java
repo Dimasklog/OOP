@@ -294,4 +294,93 @@ class BlackjackRoundTests {
         assertEquals(RoundPhase.FINISHED, round.getPhase());
         assertEquals(48, shoe.remainingCards());
     }
+    @Test
+    void doubleWinTest() {
+        BlackjackRound game = new BlackjackRound(
+                List.of(player), new Shoe(1, new Random(6))
+        );
+        game.placeBet(id, bet);
+        game.start();
+        new DoubleAction(id, 0).execute(game);
+        game.playDealer();
+        game.settle();
+
+        assertEquals(money("120"), player.getBalance());
+        assertEquals(RoundPhase.FINISHED, game.getPhase());
+    }
+
+    @Test
+    void doubleWithoutFundsTest() {
+        round.placeBet(id, money("60"));
+        round.start();
+
+        assertThrows(InsufficientFundsException.class,
+                () -> new DoubleAction(id, 0).execute(round));
+
+        assertEquals(money("40"), player.getBalance());
+        assertEquals(48, shoe.remainingCards());
+        assertEquals(RoundPhase.PLAYER_TURNS, round.getPhase());
+    }
+
+    @Test
+    void doubleWithEmptyShoeTest() {
+        round.placeBet(id, bet);
+        round.start();
+        while (shoe.remainingCards() > 0) {
+            shoe.draw();
+        }
+
+        assertThrows(ShoeEmptyException.class,
+                () -> new DoubleAction(id, 0).execute(round));
+
+        assertEquals(money("90"), player.getBalance());
+        assertEquals(RoundPhase.PLAYER_TURNS, round.getPhase());
+    }
+    @Test
+    void splitCreatesTwoTurnsTest() {
+        BlackjackRound game = new BlackjackRound(
+                List.of(player), new Shoe(1, new Random(595))
+        );
+        game.placeBet(id, bet);
+        game.start();
+        new SplitAction(id, 0).execute(game);
+
+        assertEquals(money("80"), player.getBalance());
+        assertEquals(0, game.getCurrentHandIndex());
+
+        game.stand(id, 0);
+        assertEquals(1, game.getCurrentHandIndex());
+    }
+
+    @Test
+    void splitAcesPayoutTest() {
+        BlackjackRound game = new BlackjackRound(
+                List.of(player), new Shoe(1, new Random(2540))
+        );
+        game.placeBet(id, bet);
+        game.start();
+        new SplitAction(id, 0).execute(game);
+
+        assertEquals(RoundPhase.DEALER_TURN, game.getPhase());
+        game.playDealer();
+        game.settle();
+
+        assertEquals(money("100"), player.getBalance());
+        assertEquals(RoundPhase.FINISHED, game.getPhase());
+    }
+
+    @Test
+    void splitWithoutFundsTest() {
+        Shoe splitShoe = new Shoe(1, new Random(595));
+        BlackjackRound game = new BlackjackRound(List.of(player), splitShoe);
+        game.placeBet(id, money("60"));
+        game.start();
+
+        assertThrows(InsufficientFundsException.class,
+                () -> new SplitAction(id, 0).execute(game));
+
+        assertEquals(money("40"), player.getBalance());
+        assertEquals(48, splitShoe.remainingCards());
+        assertEquals(0, game.getCurrentHandIndex());
+    }
 }

@@ -245,4 +245,34 @@ class RoundHandTests {
         assertThrows(IllegalMoveException.class, () -> hand.surrender());
         assertEquals(HandStatus.ACTIVE, hand.getStatus());
     }
+    @Test
+    void originalHandBlackjackTest() {
+        RoundHand hand = new RoundHand(new Money(new BigDecimal("10")));
+        hand.addCard(new Card(Rank.ACE, Suit.HEARTS));
+        hand.addCard(new Card(Rank.KING, Suit.CLUBS));
+
+        assertFalse(hand.isFromSplit());
+        assertTrue(hand.isBlackjack());
+    }
+
+    @Test
+    void splitHandIsNotBlackjackTest() {
+        RoundHand hand = new RoundHand(new Money(new BigDecimal("10")), true);
+        hand.addCard(new Card(Rank.ACE, Suit.HEARTS));
+        hand.addCard(new Card(Rank.KING, Suit.CLUBS));
+
+        assertTrue(hand.isFromSplit());
+        assertEquals(21, hand.getTotal());
+        assertFalse(hand.isBlackjack());
+    }
+
+    @Test
+    void splitHandCannotSurrenderTest() {
+        RoundHand hand = new RoundHand(new Money(new BigDecimal("10")), true);
+        hand.addCard(new Card(Rank.EIGHT, Suit.HEARTS));
+        hand.addCard(new Card(Rank.EIGHT, Suit.CLUBS));
+
+        assertThrows(IllegalMoveException.class, () -> hand.surrender());
+        assertEquals(HandStatus.ACTIVE, hand.getStatus());
+    }
 }

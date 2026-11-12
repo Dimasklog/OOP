@@ -152,6 +152,86 @@
         }
 
         /**
+         * Списывает дополнительную ставку, удваивает ставку руки
+         * и выдает ей одну последнюю карту.
+         *
+         * @param playerId идентификатор игрока
+         * @param handIndex индекс руки, начиная с нуля
+         * @throws IllegalArgumentException если идентификатор null или индекс отрицательный
+         * @throws IllegalMoveException если удвоение этой рукой сейчас запрещено
+         * @throws InsufficientFundsException если не хватает денег
+         * @throws ShoeEmptyException если башмак пуст
+         */
+        public void doubleDown(PlayerId playerId, int handIndex){
+            RoundHand currentHand = validateCurrentHand(playerId, handIndex);
+            if (currentHand.getCards().size() != 2){
+                throw new IllegalMoveException("hand must have exactly two cards");
+            }
+            if (shoe.remainingCards() == 0){
+                throw new ShoeEmptyException("shoe is empty");
+            }
+            Player currentPlayer = findPlayer(playerId);
+            currentPlayer.debit(currentHand.getBet());
+            currentHand.doubleDown(shoe.draw());
+            advanceTurn();
+        }
+
+        /**
+         * Разделяет текущую пару на две руки с одинаковыми ставками.
+         * Списывает дополнительную ставку и выдает каждой руке по карте.
+         * После разделения тузов обе руки останавливаются.
+         *
+         * @param playerId идентификатор игрока
+         * @param handIndex индекс разделяемой руки
+         * @throws IllegalArgumentException если идентификатор null или индекс отрицательный
+         * @throws IllegalMoveException если разделение сейчас запрещено, достигнут лимит рук или недостаточно карт
+         * @throws InsufficientFundsException если не хватает денег
+         */
+        public void split(PlayerId playerId, int handIndex){
+            RoundHand currentHand = validateCurrentHand(playerId, handIndex);
+
+            if (currentHand.getCards().size() != 2){
+                throw new IllegalMoveException("hand must have exactly two cards");
+            }
+            if (currentHand.getCards().getFirst().rank() != currentHand.getCards().getLast().rank()){
+                throw new IllegalMoveException("ranks must be same");
+            }
+
+            List<RoundHand> roundHandList = hands.get(playerId);
+
+            if (roundHandList.size() >= 4){
+                throw new IllegalMoveException("maximum of four hands per player");
+            }
+            if (shoe.remainingCards() < 2){
+                throw new IllegalMoveException("not enough cards for split");
+            }
+
+            RoundHand roundHandFirst = new RoundHand(currentHand.getBet(), true);
+            RoundHand roundHandSecond = new RoundHand(currentHand.getBet(), true);
+
+            roundHandFirst.addCard(currentHand.getCards().getFirst());
+            roundHandSecond.addCard(currentHand.getCards().getLast());
+
+            findPlayer(playerId).debit(currentHand.getBet());
+
+            roundHandFirst.addCard(shoe.draw());
+            roundHandSecond.addCard(shoe.draw());
+
+            if (currentHand.getCards().getFirst().rank() == Rank.ACE) {
+                if (!roundHandFirst.getStatus().isFinished()) {
+                    roundHandFirst.stand();
+                }
+                if (!roundHandSecond.getStatus().isFinished()) {
+                    roundHandSecond.stand();
+                }
+            }
+
+            roundHandList.set(handIndex, roundHandFirst);
+            roundHandList.add(handIndex + 1, roundHandSecond);
+            advanceTurn();
+        }
+
+        /**
          * Выполняет ход дилера и переводит раздачу к расчетам.
          * Дилер добирает до 17, включая остановку на мягких 17.
          * Если сравнивать руки не требуется, карты не добираются.
