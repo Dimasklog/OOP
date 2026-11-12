@@ -241,4 +241,57 @@ class BlackjackRoundTests {
         assertEquals(RoundPhase.SETTLEMENT, game.getPhase());
         assertEquals(48, softShoe.remainingCards());
     }
+    @Test
+    void winningRoundTest() {
+        round.placeBet(id, bet);
+        round.start();
+        round.stand(id, 0);
+        round.playDealer();
+        round.settle();
+
+        assertEquals(RoundPhase.FINISHED, round.getPhase());
+        assertEquals(money("110"), player.getBalance());
+
+        assertThrows(IllegalMoveException.class, () -> round.settle());
+        assertEquals(money("110"), player.getBalance());
+    }
+
+    @Test
+    void losingRoundTest() {
+        round.placeBet(id, bet);
+        round.start();
+        round.hit(id, 0); // При seed 0 игрок перебирает.
+        round.playDealer();
+        round.settle();
+
+        assertEquals(RoundPhase.FINISHED, round.getPhase());
+        assertEquals(money("90"), player.getBalance());
+    }
+
+    @Test
+    void blackjackPayoutTest() {
+        BlackjackRound game = new BlackjackRound(
+                List.of(player), new Shoe(1, new Random(26))
+        );
+        game.placeBet(id, bet);
+        game.start();
+        game.settle();
+
+        assertEquals(RoundPhase.FINISHED, game.getPhase());
+        assertEquals(money("115"), player.getBalance());
+    }
+    @Test
+    void surrenderPayoutTest() {
+        round.placeBet(id, bet);
+        round.start();
+
+        GameAction action = new SurrenderAction(id, 0);
+        action.execute(round);
+        round.playDealer();
+        round.settle();
+
+        assertEquals(money("95"), player.getBalance());
+        assertEquals(RoundPhase.FINISHED, round.getPhase());
+        assertEquals(48, shoe.remainingCards());
+    }
 }

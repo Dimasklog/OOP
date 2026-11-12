@@ -220,4 +220,29 @@ class RoundHandTests {
         assertEquals(26, hand.getTotal());
         assertEquals(before, hand.getCards());
     }
+    @Test
+    void surrenderTest() {
+        RoundHand hand = new RoundHand(new Money(new BigDecimal("10")));
+        hand.addCard(new Card(Rank.TEN, Suit.HEARTS));
+        hand.addCard(new Card(Rank.SIX, Suit.CLUBS));
+
+        hand.surrender();
+
+        assertEquals(HandStatus.SURRENDERED, hand.getStatus());
+        assertThrows(IllegalMoveException.class, () -> hand.surrender());
+    }
+
+    @Test
+    void surrenderRequiresTwoCardsTest() {
+        RoundHand hand = new RoundHand(new Money(new BigDecimal("10")));
+        assertThrows(IllegalMoveException.class, () -> hand.surrender());
+
+        hand.addCard(new Card(Rank.TWO, Suit.HEARTS));
+        assertThrows(IllegalMoveException.class, () -> hand.surrender());
+
+        hand.addCard(new Card(Rank.THREE, Suit.CLUBS));
+        hand.addCard(new Card(Rank.FOUR, Suit.SPADES));
+        assertThrows(IllegalMoveException.class, () -> hand.surrender());
+        assertEquals(HandStatus.ACTIVE, hand.getStatus());
+    }
 }

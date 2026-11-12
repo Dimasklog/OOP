@@ -19,7 +19,7 @@ public enum HandStatus {
     /**
      * Игрок сдался.
      */
-    SURRENDER;
+    SURRENDERED;
 
     /**
      * Проверяет, закончены ли действия игрока этой рукой.

@@ -80,6 +80,22 @@ public class RoundHand {
     }
 
     /**
+     * Сдает активную руку из двух карт.
+     * Возврат половины ставки выполняется при расчете раздачи.
+     *
+     * @throws IllegalMoveException если рука завершена или содержит не две карты
+     */
+    public void surrender() {
+        if (status.isFinished()) {
+            throw new IllegalMoveException("hand is already finished");
+        }
+        if (hand.getCards().size() != 2) {
+            throw new IllegalMoveException("hand must have exactly two cards");
+        }
+
+        status = HandStatus.SURRENDERED;
+    }
+    /**
      * Проверяет наличие начального блэкджека.
      *
      * @return true, если две начальные карты дают 21 очко
@@ -118,4 +134,5 @@ public class RoundHand {
     public HandStatus getStatus() {
         return status;
     }
+
 }

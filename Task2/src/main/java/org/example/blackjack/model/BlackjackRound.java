@@ -1,5 +1,6 @@
     package org.example.blackjack.model;
 
+    import org.example.blackjack.model.enums.HandOutcome;
     import org.example.blackjack.model.enums.HandStatus;
     import org.example.blackjack.model.enums.Rank;
     import org.example.blackjack.model.enums.RoundPhase;
@@ -7,6 +8,7 @@
     import org.example.blackjack.model.exceptions.InsufficientFundsException;
     import org.example.blackjack.model.exceptions.ShoeEmptyException;
 
+    import java.math.BigDecimal;
     import java.util.ArrayList;
     import java.util.LinkedHashMap;
     import java.util.List;
@@ -136,6 +138,20 @@
         }
 
         /**
+         * Сдает текущую руку и обновляет очередь.
+         *
+         * @param playerId идентификатор игрока
+         * @param handIndex индекс руки, начиная с нуля
+         * @throws IllegalArgumentException если идентификатор null или индекс отрицательный
+         * @throws IllegalMoveException если сдача этой рукой сейчас запрещена
+         */
+        public void surrender(PlayerId playerId, int handIndex){
+            RoundHand currentHand = validateCurrentHand(playerId, handIndex);
+            currentHand.surrender();
+            advanceTurn();
+        }
+
+        /**
          * Выполняет ход дилера и переводит раздачу к расчетам.
          * Дилер добирает до 17, включая остановку на мягких 17.
          * Если сравнивать руки не требуется, карты не добираются.
@@ -153,6 +169,28 @@
                 }
             }
             phase = RoundPhase.SETTLEMENT;
+        }
+
+        /**
+         * Начисляет выплаты по всем рукам и завершает раздачу.
+         * Нулевые выплаты пропускаются.
+         *
+         * @throws IllegalMoveException если сейчас не фаза расчетов или расчет уже выполнен
+         */
+        public void settle(){
+            if (phase != RoundPhase.SETTLEMENT){
+                throw new IllegalMoveException("phase must be 'SETTLEMENT'");
+            }
+            for (Player player: players){
+                for (RoundHand roundHand: hands.get(player.getId())){
+                    HandOutcome outcome = determineOutcome(roundHand);
+                    Money payout = outcome.payout(roundHand.getBet());
+                    if (payout.amount().compareTo(BigDecimal.ZERO) > 0){
+                        player.credit(payout);
+                    }
+                }
+            }
+            phase = RoundPhase.FINISHED;
         }
 
 
@@ -311,5 +349,31 @@
                 }
             }
             return false;
+        }
+
+        private HandOutcome determineOutcome(RoundHand hand){
+            if (hand.getStatus() == HandStatus.BUST){
+                return HandOutcome.LOSS;
+            } else if (dealerHasBlackjack()) {
+                if (hand.isBlackjack()){
+                    return HandOutcome.PUSH;
+                } else {
+                    return HandOutcome.LOSS;
+                }
+            } else if (hand.getStatus() == HandStatus.SURRENDERED) {
+                return HandOutcome.SURRENDER;
+            } else if (hand.isBlackjack()) {
+                return HandOutcome.BLACKJACK;
+            } else if (evaluator.evaluate(dealerHand) > 21) {
+                return HandOutcome.WIN;
+            } else {
+                if (hand.getTotal() > evaluator.evaluate(dealerHand)){
+                    return HandOutcome.WIN;
+                } else if (hand.getTotal() < evaluator.evaluate(dealerHand)) {
+                    return HandOutcome.LOSS;
+                } else {
+                    return HandOutcome.PUSH;
+                }
+            }
         }
     }
