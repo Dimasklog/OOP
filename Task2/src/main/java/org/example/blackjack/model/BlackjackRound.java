@@ -1,12 +1,11 @@
     package org.example.blackjack.model;
 
-    import org.example.blackjack.model.enums.HandOutcome;
-    import org.example.blackjack.model.enums.HandStatus;
-    import org.example.blackjack.model.enums.Rank;
-    import org.example.blackjack.model.enums.RoundPhase;
+    import org.example.blackjack.model.enums.*;
+    import org.example.blackjack.model.events.*;
     import org.example.blackjack.model.exceptions.IllegalMoveException;
     import org.example.blackjack.model.exceptions.InsufficientFundsException;
     import org.example.blackjack.model.exceptions.ShoeEmptyException;
+    import org.example.blackjack.model.view.*;
 
     import java.math.BigDecimal;
     import java.util.ArrayList;
@@ -28,6 +27,8 @@
         private final HandEvaluator evaluator = new HandEvaluator();
         private int currentPlayerIndex = -1;
         private int currentHandIndex = -1;
+        private final Map<PlayerId, InsuranceDecision> insuranceDecisions = new LinkedHashMap<>();
+        private final List<GameEvent> events = new ArrayList<>();
 
         /**
          * Создает раздачу в фазе приема ставок.
@@ -94,6 +95,7 @@
             RoundHand roundHand = new RoundHand(bet);
             player.debit(bet);
             playerHands.add(roundHand);
+            events.add(new BetPlacedEvent(playerId, bet));
         }
 
         /**
@@ -232,6 +234,42 @@
         }
 
         /**
+         * Принимает страховую ставку игрока.
+         * Сумма не должна превышать половину основной ставки.
+         *
+         * @param playerId идентификатор игрока
+         * @param amount сумма страховки
+         * @throws IllegalArgumentException если данные null или сумма не положительная
+         * @throws IllegalMoveException если решение сейчас запрещено или превышена максимальная сумма
+         * @throws InsufficientFundsException если не хватает денег
+         */
+        public void buyInsurance(PlayerId playerId, Money amount){
+            Player player = validateInsuranceDecision(playerId);
+            InsuranceDecision decision = new InsuranceDecision(InsuranceStatus.TAKEN, amount);
+            Money mainBet = hands.get(player.getId()).getFirst().getBet();
+            Money maximum = mainBet.multiply(new BigDecimal("0.5"));
+            if (amount.amount().compareTo(maximum.amount()) > 0){
+                throw new IllegalMoveException("amount must not be bigger than maximum");
+            }
+            player.debit(amount);
+            insuranceDecisions.put(playerId, decision);
+            completeInsuranceIfReady();
+        }
+
+        /**
+         * Регистрирует отказ игрока от страховки.
+         *
+         * @param playerId идентификатор игрока
+         * @throws IllegalArgumentException если идентификатор null
+         * @throws IllegalMoveException если решение сейчас запрещено
+         */
+        public void declineInsurance(PlayerId playerId){
+            validateInsuranceDecision(playerId);
+            insuranceDecisions.put(playerId, new InsuranceDecision(InsuranceStatus.DECLINED, new Money(BigDecimal.ZERO)));
+            completeInsuranceIfReady();
+        }
+
+        /**
          * Выполняет ход дилера и переводит раздачу к расчетам.
          * Дилер добирает до 17, включая остановку на мягких 17.
          * Если сравнивать руки не требуется, карты не добираются.
@@ -271,6 +309,77 @@
                 }
             }
             phase = RoundPhase.FINISHED;
+        }
+
+        /**
+         * Возвращает неизменяемые снимки рук игрока в порядке игры.
+         *
+         * @param playerId идентификатор игрока
+         * @return неизменяемый список снимков рук
+         * @throws IllegalArgumentException если идентификатор null
+         * @throws IllegalMoveException если игрок не участвует в раздаче
+         */
+        public List<HandView> getHandViews(PlayerId playerId){
+            if (playerId == null){
+                throw new IllegalArgumentException("player id must not be null");
+            }
+            findPlayer(playerId);
+            List<HandView> result = new ArrayList<>();
+            for (RoundHand roundHand: hands.get(playerId)){
+                result.add(roundHand.toView());
+            }
+
+            return List.copyOf(result);
+        }
+
+        /**
+         * Возвращает неизменяемый снимок журнала событий.
+         *
+         * @return события в порядке возникновения
+         */
+        public List<GameEvent> getEvents(){
+            return List.copyOf(events);
+        }
+
+        /**
+         * Проверяет, разрешено ли показывать все карты дилера.
+         *
+         * @return true, если карты дилера раскрыты
+         */
+        public boolean isDealerRevealed(){
+            return phase == RoundPhase.DEALER_TURN || phase == RoundPhase.SETTLEMENT || phase == RoundPhase.FINISHED;
+        }
+
+        /**
+         * Возвращает видимые карты дилера.
+         * До раскрытия доступна только первая карта.
+         * До начальной раздачи список пуст.
+         *
+         * @return неизменяемый список видимых карт
+         */
+        public List<Card> getVisibleDealerCards(){
+            List<Card> cards = dealerHand.getCards();
+            if (cards.isEmpty()){
+                return cards;
+            } else if (isDealerRevealed()){
+                return cards;
+            } else {
+                return List.of(cards.getFirst());
+            }
+        }
+
+
+        /**
+         * Возвращает полную сумму очков дилера, включая возможный перебор.
+         *
+         * @return сумма очков дилера
+         * @throws IllegalMoveException если карты дилера еще не раскрыты
+         */
+        public int getDealerTotal(){
+            if (!isDealerRevealed()){
+                throw new IllegalMoveException("dealer must be revealed");
+            }
+            return evaluator.evaluate(dealerHand);
         }
 
 
@@ -376,7 +485,7 @@
 
         private void choosePhaseAfterInitialDeal(){
             if (Rank.ACE == dealerHand.getCards().getFirst().rank()){
-                phase = RoundPhase.INSURANCE;
+                beginInsurance();
             } else if (dealerHasBlackjack()) {
                 phase = RoundPhase.SETTLEMENT;
             } else {
@@ -454,6 +563,52 @@
                 } else {
                     return HandOutcome.PUSH;
                 }
+            }
+        }
+
+        private void beginInsurance(){
+            for (Player player: players){
+                insuranceDecisions.put(player.getId(), new InsuranceDecision(InsuranceStatus.PENDING, new Money(BigDecimal.ZERO)));
+            }
+            phase = RoundPhase.INSURANCE;
+        }
+
+        private Player validateInsuranceDecision(PlayerId playerId){
+            if (playerId == null){
+                throw new IllegalArgumentException("player id must not be null");
+            }
+            if (phase != RoundPhase.INSURANCE){
+                throw new IllegalMoveException("phase must be 'INSURANCE'");
+            }
+            Player player = findPlayer(playerId);
+            InsuranceDecision decision = insuranceDecisions.get(playerId);
+            if (decision.status().isDecided()){
+                throw new IllegalMoveException("repeated decision is prohibited");
+            }
+            return player;
+        }
+
+        private void completeInsuranceIfReady(){
+            for (InsuranceDecision decision: insuranceDecisions.values()){
+                if (!decision.status().isDecided()){
+                    return;
+                }
+            }
+            if (dealerHasBlackjack()){
+                for (Player player: players){
+                    InsuranceDecision decision = insuranceDecisions.get(player.getId());
+                    if (decision.status() == InsuranceStatus.TAKEN){
+                        Money payout = decision.amount().multiply(new BigDecimal("3"));
+                        player.credit(payout);
+                    }
+                }
+                phase = RoundPhase.SETTLEMENT;
+                return;
+            }
+            if (selectFirstActiveHand()) {
+                phase = RoundPhase.PLAYER_TURNS;
+            } else {
+                phase = RoundPhase.SETTLEMENT;
             }
         }
     }

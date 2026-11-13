@@ -2,6 +2,7 @@ package org.example.blackjack.model;
 
 import org.example.blackjack.model.enums.HandStatus;
 import org.example.blackjack.model.exceptions.IllegalMoveException;
+import org.example.blackjack.model.view.*;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -186,4 +187,12 @@ public class RoundHand {
         return fromSplit;
     }
 
+    /**
+     * Создает неизменяемый снимок текущего состояния руки.
+     *
+     * @return снимок руки
+     */
+    public HandView toView(){
+        return new HandView(getCards(), getBet(), getStatus(), getTotal());
+    }
 }

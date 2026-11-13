@@ -2,6 +2,7 @@ package org.example;
 
 import org.example.blackjack.model.*;
 import org.example.blackjack.model.actions.*;
+import org.example.blackjack.model.events.*;
 import org.example.blackjack.model.enums.RoundPhase;
 import org.example.blackjack.model.exceptions.*;
 import org.junit.jupiter.api.Test;
@@ -382,5 +383,132 @@ class BlackjackRoundTests {
         assertEquals(money("40"), player.getBalance());
         assertEquals(48, splitShoe.remainingCards());
         assertEquals(0, game.getCurrentHandIndex());
+    }
+    @Test
+    void insuranceWinsTest() {
+        BlackjackRound game = new BlackjackRound(
+                List.of(player), new Shoe(1, new Random(55))
+        );
+        game.placeBet(id, bet);
+        game.start();
+        game.buyInsurance(id, money("5"));
+
+        assertEquals(RoundPhase.SETTLEMENT, game.getPhase());
+        assertEquals(money("100"), player.getBalance());
+
+        game.settle();
+        assertEquals(RoundPhase.FINISHED, game.getPhase());
+        assertEquals(money("100"), player.getBalance());
+    }
+
+    @Test
+    void insuranceWaitsForEveryoneTest() {
+        Player second = new Player(new PlayerId(2), "Анна", money("100"));
+        BlackjackRound game = new BlackjackRound(
+                List.of(player, second), new Shoe(1, new Random(33))
+        );
+        game.placeBet(id, bet);
+        game.placeBet(second.getId(), bet);
+        game.start();
+        game.buyInsurance(id, money("5"));
+
+        assertEquals(RoundPhase.INSURANCE, game.getPhase());
+        assertThrows(IllegalMoveException.class,
+                () -> game.buyInsurance(id, money("1")));
+
+        game.declineInsurance(second.getId());
+
+        assertEquals(RoundPhase.PLAYER_TURNS, game.getPhase());
+        assertEquals(id, game.getCurrentPlayerId());
+        assertEquals(money("85"), player.getBalance());
+    }
+
+    @Test
+    void playerWithBlackjackCanBuyInsuranceTest() {
+        BlackjackRound game = new BlackjackRound(
+                List.of(player), new Shoe(1, new Random(327))
+        );
+        game.placeBet(id, bet);
+        game.start();
+        game.buyInsurance(id, money("5"));
+
+        assertEquals(RoundPhase.SETTLEMENT, game.getPhase());
+        game.settle();
+        assertEquals(money("110"), player.getBalance());
+    }
+    @Test
+    void dealerHiddenTest() {
+        assertTrue(round.getVisibleDealerCards().isEmpty());
+
+        round.placeBet(id, bet);
+        round.start();
+
+        assertFalse(round.isDealerRevealed());
+        assertEquals(1, round.getVisibleDealerCards().size());
+        assertThrows(IllegalMoveException.class,
+                () -> round.getDealerTotal());
+    }
+
+    @Test
+    void dealerRevealedOnTurnTest() {
+        round.placeBet(id, bet);
+        round.start();
+        round.stand(id, 0);
+
+        assertTrue(round.isDealerRevealed());
+        assertEquals(2, round.getVisibleDealerCards().size());
+        assertEquals(11, round.getDealerTotal());
+
+        round.playDealer();
+        assertEquals(22, round.getDealerTotal());
+        assertEquals(4, round.getVisibleDealerCards().size());
+    }
+
+    @Test
+    void dealerRevealedOnEarlySettlementTest() {
+        BlackjackRound game = new BlackjackRound(
+                List.of(player), new Shoe(1, new Random(49))
+        );
+        game.placeBet(id, bet);
+        game.start();
+
+        assertTrue(game.isDealerRevealed());
+        assertEquals(21, game.getDealerTotal());
+        assertThrows(UnsupportedOperationException.class,
+                () -> game.getVisibleDealerCards().clear());
+
+        game.settle();
+        assertTrue(game.isDealerRevealed());
+    }
+    @Test
+    void betEventTest() {
+        round.placeBet(id, bet);
+
+        assertEquals(
+                List.of(new BetPlacedEvent(id, bet)),
+                round.getEvents()
+        );
+    }
+
+    @Test
+    void failedBetDoesNotCreateEventTest() {
+        assertThrows(InsufficientFundsException.class,
+                () -> round.placeBet(id, money("101")));
+        assertTrue(round.getEvents().isEmpty());
+
+        round.placeBet(id, bet);
+        assertThrows(IllegalMoveException.class,
+                () -> round.placeBet(id, bet));
+        assertEquals(1, round.getEvents().size());
+    }
+
+    @Test
+    void eventSnapshotTest() {
+        List<GameEvent> before = round.getEvents();
+        round.placeBet(id, bet);
+
+        assertTrue(before.isEmpty());
+        assertThrows(UnsupportedOperationException.class,
+                () -> round.getEvents().clear());
     }
 }
