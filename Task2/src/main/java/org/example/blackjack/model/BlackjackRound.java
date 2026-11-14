@@ -104,7 +104,7 @@
          */
         public void start(){
             validateInitialDeal();
-            phase = RoundPhase.INITIAL_DEAL;
+            changePhase(RoundPhase.INITIAL_DEAL);
             dealInitialCards();
             choosePhaseAfterInitialDeal();
         }
@@ -122,6 +122,7 @@
         public void hit(PlayerId playerId, int handIndex){
             RoundHand currentHand = validateCurrentHand(playerId, handIndex);
             currentHand.addCard(shoe.draw());
+            events.add(new PlayerActionEvent(playerId, handIndex, ActionType.HIT));
             advanceTurn();
         }
 
@@ -136,6 +137,7 @@
         public void stand(PlayerId playerId, int handIndex){
             RoundHand currentHand = validateCurrentHand(playerId, handIndex);
             currentHand.stand();
+            events.add(new PlayerActionEvent(playerId, handIndex, ActionType.STAND));
             advanceTurn();
         }
 
@@ -150,6 +152,7 @@
         public void surrender(PlayerId playerId, int handIndex){
             RoundHand currentHand = validateCurrentHand(playerId, handIndex);
             currentHand.surrender();
+            events.add(new PlayerActionEvent(playerId, handIndex, ActionType.SURRENDER));
             advanceTurn();
         }
 
@@ -175,6 +178,7 @@
             Player currentPlayer = findPlayer(playerId);
             currentPlayer.debit(currentHand.getBet());
             currentHand.doubleDown(shoe.draw());
+            events.add(new PlayerActionEvent(playerId, handIndex, ActionType.DOUBLE));
             advanceTurn();
         }
 
@@ -230,6 +234,7 @@
 
             roundHandList.set(handIndex, roundHandFirst);
             roundHandList.add(handIndex + 1, roundHandSecond);
+            events.add(new PlayerActionEvent(playerId, handIndex, ActionType.SPLIT));
             advanceTurn();
         }
 
@@ -286,7 +291,7 @@
                     dealerHand.addCard(shoe.draw());
                 }
             }
-            phase = RoundPhase.SETTLEMENT;
+            changePhase(RoundPhase.SETTLEMENT);
         }
 
         /**
@@ -308,7 +313,7 @@
                     }
                 }
             }
-            phase = RoundPhase.FINISHED;
+            changePhase(RoundPhase.FINISHED);
         }
 
         /**
@@ -487,12 +492,12 @@
             if (Rank.ACE == dealerHand.getCards().getFirst().rank()){
                 beginInsurance();
             } else if (dealerHasBlackjack()) {
-                phase = RoundPhase.SETTLEMENT;
+                changePhase(RoundPhase.SETTLEMENT);
             } else {
                 if (selectFirstActiveHand()){
-                    phase = RoundPhase.PLAYER_TURNS;
+                    changePhase(RoundPhase.PLAYER_TURNS);
                 } else {
-                    phase = RoundPhase.SETTLEMENT;
+                    changePhase(RoundPhase.SETTLEMENT);
                 }
             }
         }
@@ -524,9 +529,9 @@
 
         private void advanceTurn(){
             if (selectFirstActiveHand()){
-                phase = RoundPhase.PLAYER_TURNS;
+                changePhase(RoundPhase.PLAYER_TURNS);
             } else {
-                phase = RoundPhase.DEALER_TURN;
+                changePhase(RoundPhase.DEALER_TURN);
             }
         }
         private boolean hasHandsToCompare(){
@@ -570,7 +575,7 @@
             for (Player player: players){
                 insuranceDecisions.put(player.getId(), new InsuranceDecision(InsuranceStatus.PENDING, new Money(BigDecimal.ZERO)));
             }
-            phase = RoundPhase.INSURANCE;
+            changePhase(RoundPhase.INSURANCE);
         }
 
         private Player validateInsuranceDecision(PlayerId playerId){
@@ -602,13 +607,23 @@
                         player.credit(payout);
                     }
                 }
-                phase = RoundPhase.SETTLEMENT;
+                changePhase(RoundPhase.SETTLEMENT);
                 return;
             }
             if (selectFirstActiveHand()) {
-                phase = RoundPhase.PLAYER_TURNS;
+                changePhase(RoundPhase.PLAYER_TURNS);
             } else {
-                phase = RoundPhase.SETTLEMENT;
+                changePhase(RoundPhase.SETTLEMENT);
             }
+        }
+
+        private void changePhase(RoundPhase newPhase){
+            if (newPhase == null){
+                throw new IllegalArgumentException("new phase must not be null");
+            }
+            if (phase == newPhase){return;}
+            RoundPhase previousPhase = phase;
+            phase = newPhase;
+            events.add(new PhaseChangedEvent(previousPhase, newPhase));
         }
     }

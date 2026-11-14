@@ -3,7 +3,7 @@ package org.example;
 import org.example.blackjack.model.*;
 import org.example.blackjack.model.actions.*;
 import org.example.blackjack.model.events.*;
-import org.example.blackjack.model.enums.RoundPhase;
+import org.example.blackjack.model.enums.*;
 import org.example.blackjack.model.exceptions.*;
 import org.junit.jupiter.api.Test;
 
@@ -510,5 +510,70 @@ class BlackjackRoundTests {
         assertTrue(before.isEmpty());
         assertThrows(UnsupportedOperationException.class,
                 () -> round.getEvents().clear());
+    }
+    @Test
+    void phaseEventsTest() {
+        round.placeBet(id, bet);
+        round.start();
+
+        assertTrue(round.getEvents().contains(new PhaseChangedEvent(
+                RoundPhase.BETTING, RoundPhase.INITIAL_DEAL
+        )));
+        assertTrue(round.getEvents().contains(new PhaseChangedEvent(
+                RoundPhase.INITIAL_DEAL, RoundPhase.PLAYER_TURNS
+        )));
+    }
+
+    @Test
+    void failedStartDoesNotChangeJournalTest() {
+        List<GameEvent> before = round.getEvents();
+
+        assertThrows(IllegalMoveException.class, () -> round.start());
+
+        assertEquals(before, round.getEvents());
+        assertEquals(RoundPhase.BETTING, round.getPhase());
+    }
+
+    @Test
+    void hitCanKeepPlayerPhaseTest() {
+        BlackjackRound game = new BlackjackRound(
+                List.of(player), new Shoe(1, new Random(6))
+        );
+        game.placeBet(id, bet);
+        game.start();
+        game.hit(id, 0); // Было 16, после добора — 18.
+
+        assertEquals(RoundPhase.PLAYER_TURNS, game.getPhase());
+        assertTrue(game.getEvents().contains(
+                new PlayerActionEvent(id, 0, ActionType.HIT)
+        ));
+    }
+    @Test
+    void actionPrecedesPhaseEventTest() {
+        round.placeBet(id, bet);
+        round.start();
+        round.stand(id, 0);
+
+        List<GameEvent> journal = round.getEvents();
+        GameEvent action = new PlayerActionEvent(id, 0, ActionType.STAND);
+        GameEvent transition = new PhaseChangedEvent(
+                RoundPhase.PLAYER_TURNS, RoundPhase.DEALER_TURN
+        );
+
+        assertTrue(journal.contains(action));
+        assertTrue(journal.indexOf(action) < journal.indexOf(transition));
+    }
+
+    @Test
+    void failedActionDoesNotChangeJournalTest() {
+        round.placeBet(id, bet);
+        round.start();
+        List<GameEvent> before = round.getEvents();
+
+        assertThrows(IllegalMoveException.class,
+                () -> round.hit(new PlayerId(2), 0));
+
+        assertEquals(before, round.getEvents());
+        assertEquals(48, shoe.remainingCards());
     }
 }

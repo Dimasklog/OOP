@@ -5,8 +5,13 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="d13fb329-7c81-45c2-8aaa-97372c88c092" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/example/blackjack/model/enums/ActionType.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/example/blackjack/model/events/PhaseChangedEvent.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/org/example/blackjack/model/events/PlayerActionEvent.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/org/example/blackjack/model/BlackjackRound.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/blackjack/model/BlackjackRound.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/blackjack/model/events/GameEvent.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/blackjack/model/events/GameEvent.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/blackjack/model/view/HandView.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/blackjack/model/view/HandView.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/test/java/org/example/BlackjackRoundTests.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/test/java/org/example/BlackjackRoundTests.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -17,8 +22,9 @@
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
       <list>
-        <option value="Record" />
         <option value="Exception" />
+        <option value="Interface" />
+        <option value="Record" />
         <option value="Enum" />
         <option value="Class" />
       </list>
