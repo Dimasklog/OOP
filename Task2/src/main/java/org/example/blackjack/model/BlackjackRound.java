@@ -258,6 +258,7 @@
             }
             player.debit(amount);
             insuranceDecisions.put(playerId, decision);
+            events.add(new InsuranceDecisionEvent(playerId, decision));
             completeInsuranceIfReady();
         }
 
@@ -271,6 +272,7 @@
         public void declineInsurance(PlayerId playerId){
             validateInsuranceDecision(playerId);
             insuranceDecisions.put(playerId, new InsuranceDecision(InsuranceStatus.DECLINED, new Money(BigDecimal.ZERO)));
+            events.add(new InsuranceDecisionEvent(playerId, insuranceDecisions.get(playerId)));
             completeInsuranceIfReady();
         }
 
@@ -305,12 +307,16 @@
                 throw new IllegalMoveException("phase must be 'SETTLEMENT'");
             }
             for (Player player: players){
-                for (RoundHand roundHand: hands.get(player.getId())){
+                List<RoundHand> playerHands = hands.get(player.getId());
+
+                for (int handIndex = 0; handIndex < playerHands.size(); handIndex++){
+                    RoundHand roundHand = playerHands.get(handIndex);
                     HandOutcome outcome = determineOutcome(roundHand);
                     Money payout = outcome.payout(roundHand.getBet());
                     if (payout.amount().compareTo(BigDecimal.ZERO) > 0){
                         player.credit(payout);
                     }
+                    events.add(new HandSettledEvent(player.getId(), handIndex, outcome, roundHand.getBet(), payout));
                 }
             }
             changePhase(RoundPhase.FINISHED);
@@ -605,11 +611,25 @@
                     if (decision.status() == InsuranceStatus.TAKEN){
                         Money payout = decision.amount().multiply(new BigDecimal("3"));
                         player.credit(payout);
+                        events.add(new InsuranceSettledEvent(player.getId(), decision.amount(), payout));
                     }
                 }
                 changePhase(RoundPhase.SETTLEMENT);
                 return;
             }
+
+            for (Player player : players) {
+                InsuranceDecision decision =
+                        insuranceDecisions.get(player.getId());
+
+                if (decision.status() == InsuranceStatus.TAKEN) {
+                    events.add(new InsuranceSettledEvent(
+                            player.getId(),
+                            decision.amount(),
+                            new Money(BigDecimal.ZERO)));
+                }
+            }
+
             if (selectFirstActiveHand()) {
                 changePhase(RoundPhase.PLAYER_TURNS);
             } else {
@@ -626,4 +646,6 @@
             phase = newPhase;
             events.add(new PhaseChangedEvent(previousPhase, newPhase));
         }
+
+
     }

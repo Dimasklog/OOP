@@ -252,6 +252,9 @@ class BlackjackRoundTests {
 
         assertEquals(RoundPhase.FINISHED, round.getPhase());
         assertEquals(money("110"), player.getBalance());
+        assertTrue(round.getEvents().contains(
+                new HandSettledEvent(id, 0, HandOutcome.WIN, bet, money("20"))
+        ));
 
         assertThrows(IllegalMoveException.class, () -> round.settle());
         assertEquals(money("110"), player.getBalance());
@@ -261,12 +264,15 @@ class BlackjackRoundTests {
     void losingRoundTest() {
         round.placeBet(id, bet);
         round.start();
-        round.hit(id, 0); // При seed 0 игрок перебирает.
+        round.hit(id, 0);
         round.playDealer();
         round.settle();
 
         assertEquals(RoundPhase.FINISHED, round.getPhase());
         assertEquals(money("90"), player.getBalance());
+        assertTrue(round.getEvents().contains(
+                new HandSettledEvent(id, 0, HandOutcome.LOSS, bet, money("0"))
+        ));
     }
 
     @Test
@@ -575,5 +581,48 @@ class BlackjackRoundTests {
 
         assertEquals(before, round.getEvents());
         assertEquals(48, shoe.remainingCards());
+    }
+    /**
+     * При блэкджеке дилера страховка возвращается втройне.
+     */
+    @Test
+    void winningInsuranceEventTest() {
+        BlackjackRound game = startWithSeed(55);
+
+        game.buyInsurance(id, money("5"));
+
+        assertTrue(game.getEvents().contains(
+                new InsuranceSettledEvent(id, money("5"), money("15"))));
+        assertEquals(RoundPhase.SETTLEMENT, game.getPhase());
+    }
+
+    /**
+     * Без блэкджека дилера выплата по страховке равна нулю.
+     */
+    @Test
+    void losingInsuranceEventTest() {
+        BlackjackRound game = startWithSeed(8);
+
+        game.buyInsurance(id, money("5"));
+
+        assertTrue(game.getEvents().contains(
+                new InsuranceSettledEvent(id, money("5"), money("0"))));
+        assertEquals(RoundPhase.PLAYER_TURNS, game.getPhase());
+    }
+
+    /**
+     * Отказ от страховки записывается в журнал.
+     */
+    @Test
+    void declinedInsuranceEventTest() {
+        BlackjackRound game = startWithSeed(8);
+
+        game.declineInsurance(id);
+
+        InsuranceDecision decision = new InsuranceDecision(
+                InsuranceStatus.DECLINED, money("0"));
+
+        assertTrue(game.getEvents().contains(
+                new InsuranceDecisionEvent(id, decision)));
     }
 }
