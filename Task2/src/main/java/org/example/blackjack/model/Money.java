@@ -52,10 +52,11 @@ public record Money(BigDecimal amount) {
     }
 
     /**
-     * Перемножение текущих денег на коэффициент.
-     * @param factor другие деньги
-     * @return новый объект денег с перемножением
-     * @throws IllegalArgumentException если {@code factor == null}
+     * Умножает текущую сумму на коэффициент.
+     *
+     * @param factor неотрицательный коэффициент
+     * @return новый объект денег с результатом умножения
+     * @throws IllegalArgumentException если коэффициент null или отрицательный
      */
     public Money multiply(BigDecimal factor){
         if (factor == null){

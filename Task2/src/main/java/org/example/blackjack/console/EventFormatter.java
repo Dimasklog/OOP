@@ -1,12 +1,30 @@
 package org.example.blackjack.console;
 
+import org.example.blackjack.model.PlayerId;
 import org.example.blackjack.model.enums.InsuranceStatus;
 import org.example.blackjack.model.events.*;
+
+import java.util.Map;
 
 /**
  * Преобразует события раздачи в текст.
  */
 public class EventFormatter {
+    private final Map<PlayerId, String> playerNames;
+
+    /**
+     * Создает форматтер с именами игроков.
+     *
+     * @param playerNames имена игроков по идентификаторам
+     * @throws IllegalArgumentException если словарь null
+     * @throws NullPointerException если словарь содержит null
+     */
+    public EventFormatter(Map<PlayerId, String> playerNames) {
+        if (playerNames == null) {
+            throw new IllegalArgumentException("player names must not be null");
+        }
+        this.playerNames = Map.copyOf(playerNames);
+    }
 
     /**
      * Преобразует событие в текст для вывода.
@@ -22,38 +40,44 @@ public class EventFormatter {
 
         return switch (event) {
             case BetPlacedEvent e ->
-                    "Игрок " + e.playerId().value()
+                    formatPlayer(e.playerId())
                             + " поставил " + e.bet().amount().toPlainString();
 
             case PhaseChangedEvent e ->
-                    "Смена фазы: " + e.previousPhase()
-                            + " → " + e.newPhase();
+                    "Смена фазы: " + ConsoleText.phase(e.previousPhase())
+                            + " → " + ConsoleText.phase(e.newPhase());
 
             case PlayerActionEvent e ->
-                    "Игрок " + e.playerId().value()
+                    formatPlayer(e.playerId())
                             + ", рука " + (e.handIndex() + 1)
-                            + ": " + e.actionType();
+                            + ": " + ConsoleText.action(e.actionType());
 
             case HandSettledEvent e ->
-                    "Игрок " + e.playerId().value()
+                    formatPlayer(e.playerId())
                             + ", рука " + (e.handIndex() + 1)
-                            + ": " + e.outcome()
+                            + ": " + ConsoleText.outcome(e.outcome())
                             + ", ставка " + e.bet().amount().toPlainString()
                             + ", выплата " + e.payout().amount().toPlainString();
 
             case InsuranceDecisionEvent e ->
                     e.decision().status() == InsuranceStatus.TAKEN
-                            ? "Игрок " + e.playerId().value()
+                            ? formatPlayer(e.playerId())
                             + " купил страховку на "
                             + e.decision().amount().amount().toPlainString()
-                            : "Игрок " + e.playerId().value()
+                            : formatPlayer(e.playerId())
                             + " отказался от страховки";
 
             case InsuranceSettledEvent e ->
-                    "Страховка игрока " + e.playerId().value()
+                    "Страховка игрока " + formatPlayer(e.playerId())
                             + ": ставка "
                             + e.insuranceBet().amount().toPlainString()
-                            + ", выплата " + e.payout().amount().toPlainString();
+                            + ", выплата "
+                            + e.payout().amount().toPlainString();
         };
+    }
+
+    private String formatPlayer(PlayerId playerId) {
+        return playerNames.getOrDefault(playerId, "Игрок")
+                + " (ID: " + playerId.value() + ")";
     }
 }

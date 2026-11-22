@@ -7,8 +7,9 @@ package org.example.blackjack.model;
 public record PlayerId(long value) {
     /**
      * Создает идентификационный номер игрока.
+     *
      * @param value значение номера
-     * @throws IllegalArgumentException если {@code value == null}
+     * @throws IllegalArgumentException если {@code value <= 0}
      */
     public PlayerId{
         if (value <= 0){
