@@ -2,16 +2,11 @@
 
     import org.example.blackjack.model.enums.*;
     import org.example.blackjack.model.events.*;
-    import org.example.blackjack.model.exceptions.IllegalMoveException;
-    import org.example.blackjack.model.exceptions.InsufficientFundsException;
-    import org.example.blackjack.model.exceptions.ShoeEmptyException;
+    import org.example.blackjack.model.exceptions.*;
     import org.example.blackjack.model.view.*;
 
     import java.math.BigDecimal;
-    import java.util.ArrayList;
-    import java.util.LinkedHashMap;
-    import java.util.List;
-    import java.util.Map;
+    import java.util.*;
 
     /**
      * Раздача блэкджека.
@@ -29,6 +24,7 @@
         private int currentHandIndex = -1;
         private final Map<PlayerId, InsuranceDecision> insuranceDecisions = new LinkedHashMap<>();
         private final List<GameEvent> events = new ArrayList<>();
+        private static final int MAX_HANDS_PER_PLAYER = 4;
 
         /**
          * Создает раздачу в фазе приема ставок.
@@ -205,7 +201,7 @@
 
             List<RoundHand> roundHandList = hands.get(playerId);
 
-            if (roundHandList.size() >= 4){
+            if (roundHandList.size() >= MAX_HANDS_PER_PLAYER) {
                 throw new IllegalMoveException("maximum of four hands per player");
             }
             if (shoe.remainingCards() < 2){
@@ -361,6 +357,70 @@
             return phase == RoundPhase.DEALER_TURN || phase == RoundPhase.SETTLEMENT || phase == RoundPhase.FINISHED;
         }
 
+        /**
+         * Рассчитывает консервативный запас карт на полную раздачу.
+         * У каждого участника может быть до четырех рук по 21 карте,
+         * у дилера — до 17 карт.
+         *
+         * @param playerCount количество участников
+         * @return требуемый запас карт
+         * @throws IllegalArgumentException если количество участников
+         *                                  не положительное или слишком большое
+         */
+        public static int requiredCardReserve(int playerCount) {
+            long reserve = (long) playerCount * MAX_HANDS_PER_PLAYER * 21 + 17;
+
+            if (playerCount <= 0 || reserve > Integer.MAX_VALUE - 51) {
+                throw new IllegalArgumentException("invalid player count");
+            }
+
+            return (int) reserve;
+        }
+
+        /**
+         * Возвращает доступные действия текущей руки с учетом денег и карт.
+         * Вне фазы действий игроков возвращает пустой набор.
+         *
+         * @return неизменяемый набор разрешенных действий
+         */
+        public Set<ActionType> getAvailableActions() {
+            if (phase != RoundPhase.PLAYER_TURNS) {
+                return Set.of();
+            }
+
+            Player player = players.get(currentPlayerIndex);
+            List<RoundHand> playerHands = hands.get(player.getId());
+            RoundHand hand = playerHands.get(currentHandIndex);
+
+            EnumSet<ActionType> available = EnumSet.of(ActionType.STAND);
+
+            if (shoe.remainingCards() > 0) {
+                available.add(ActionType.HIT);
+            }
+
+            if (hand.getCards().size() == 2) {
+                if (!hand.isFromSplit()) {
+                    available.add(ActionType.SURRENDER);
+                }
+
+                boolean funds = player.getBalance().amount()
+                        .compareTo(hand.getBet().amount()) >= 0;
+
+                if (funds && shoe.remainingCards() > 0) {
+                    available.add(ActionType.DOUBLE);
+                }
+
+                if (funds
+                        && shoe.remainingCards() >= 2
+                        && playerHands.size() < MAX_HANDS_PER_PLAYER
+                        && hand.getCards().getFirst().rank()
+                        == hand.getCards().getLast().rank()) {
+                    available.add(ActionType.SPLIT);
+                }
+            }
+
+            return Set.copyOf(available);
+        }
         /**
          * Возвращает видимые карты дилера.
          * До раскрытия доступна только первая карта.

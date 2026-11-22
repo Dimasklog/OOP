@@ -31,7 +31,7 @@ public class BlackjackApplication {
             System.out.println("Зерно игры: " + seed);
 
             Random random = new Random(seed);
-            Shoe shoe = new Shoe(DECK_COUNT, random);
+            Shoe shoe = null;
 
             Player firstPlayer = new Player(
                     new PlayerId(100),
@@ -71,11 +71,19 @@ public class BlackjackApplication {
                     break;
                 }
 
-                int cardReserve = participants.size() * 4 * 21 + 17;
+                int cardReserve =
+                        BlackjackRound.requiredCardReserve(participants.size());
 
-                if (shoe.remainingCards() < cardReserve) {
-                    shoe = new Shoe(DECK_COUNT, random);
-                    System.out.println("Подготовлен новый башмак.");
+                Shoe prepared = Shoe.prepareForRound(
+                        shoe, cardReserve, DECK_COUNT, random
+                );
+
+                if (prepared != shoe) {
+                    shoe = prepared;
+                    System.out.println(
+                            "Подготовлен новый башмак: "
+                                    + shoe.getDeckCount() + " колод."
+                    );
                 }
 
                 System.out.println();

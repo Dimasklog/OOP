@@ -11,6 +11,7 @@ import java.util.*;
 public class Shoe {
 
     private final List<Card> cards = new ArrayList<>();
+    private final int deckCount;
 
     /**
      * Создает башмак.
@@ -26,6 +27,7 @@ public class Shoe {
             throw new IllegalArgumentException("random must not be null");
         }
 
+        this.deckCount = deckCount;
         fillCards(deckCount);
         Collections.shuffle(cards, random);
     }
@@ -48,6 +50,55 @@ public class Shoe {
             throw new ShoeEmptyException("shoe is empty");
         }
         return cards.removeLast();
+    }
+
+    /**
+     * Подбирает башмак с достаточным запасом карт для новой раздачи.
+     * Сохраняет текущий башмак, если карт хватает; иначе создает новый.
+     *
+     * @param current текущий башмак или null перед первой раздачей
+     * @param requiredCards требуемое количество карт
+     * @param minimumDeckCount минимальное количество колод в новом башмаке
+     * @param random общий генератор игры
+     * @return текущий или новый башмак
+     * @throws IllegalArgumentException если числовые параметры недопустимы
+     *                                  или генератор null
+     */
+    public static Shoe prepareForRound(
+            Shoe current, int requiredCards,
+            int minimumDeckCount, Random random) {
+
+        if (requiredCards <= 0 || minimumDeckCount <= 0
+                || minimumDeckCount > Integer.MAX_VALUE / 52
+                || random == null) {
+            throw new IllegalArgumentException(
+                    "invalid shoe preparation arguments"
+            );
+        }
+
+        if (current != null && current.remainingCards() >= requiredCards) {
+            return current;
+        }
+
+        long neededDecks = (requiredCards + 51L) / 52;
+
+        if (neededDecks > Integer.MAX_VALUE / 52) {
+            throw new IllegalArgumentException(
+                    "required card count is too large"
+            );
+        }
+
+        int count = Math.max(minimumDeckCount, (int) neededDecks);
+        return new Shoe(count, random);
+    }
+
+    /**
+     * Возвращает количество колод, из которых создан башмак.
+     *
+     * @return количество колод
+     */
+    public int getDeckCount() {
+        return deckCount;
     }
 
     private void fillCards(int deckCount){
